@@ -1,11 +1,11 @@
+#include <alloca.h>
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <cstdint>
 #include <stdio.h>
 
 extern "C" void *get_SP() noexcept;
-extern "C" void __fae_unwind() noexcept;
-
+extern "C" void __fae_unwind();
 // experimentally SP begins at 2295
 void stack_scan(const char *end) {
   int col = 0;
@@ -21,14 +21,30 @@ void stack_scan(const char *end) {
   throw 1;
 }
 
-void sink(int16_t &i) { printf("addr: %u\n", (uint16_t)&i); }
+void sink(void *i) {
+  char *n = static_cast<char *>(alloca((uint16_t)i / 4));
+  printf("addr: %u, %u\n", (uint16_t)&i, (uint16_t)n);
+}
+struct Except {};
 
+struct Destructable {
+  ~Destructable() { printf("dtor called\n"); }
+};
 [[gnu::noinline]] int16_t n() {
-  auto n = (int16_t)get_SP();
-  sink(n);
-  __fae_unwind();
+  auto n = get_SP();
+  Destructable d;
+  try {
+    sink(n);
+    __fae_unwind();
+    throw 12;
+    stack_scan(static_cast<char *>(n));
+  } catch (int i) {
+    printf("caught integer\n");
+  } catch (Except e) {
+    printf("caught except\n");
+  }
   printf("after unwind\n");
-  return n;
+  return 12;
 }
 
 extern "C" void print_table();
@@ -37,5 +53,4 @@ int main() {
   printf("main!\n");
   auto s = n();
   printf("done with main\n");
-  throw 12;
 }

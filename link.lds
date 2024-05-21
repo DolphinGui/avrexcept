@@ -171,11 +171,15 @@ SECTIONS
     *(.jumptables)
     *(.jumptables*)
     _etext = . ;
-    
+    /* These should really be in their own section, 
+       but simavr just does not handle custom sections very well */
+    PROVIDE (__lsda_begin = .) ; 
+    *(.gcc_except_table)
     PROVIDE (__fae_table_start = .) ;
     KEEP(*(.fae_data))
     PROVIDE (__fae_table_stop = .) ;
   }  > text
+
   .data          :
   {
      PROVIDE (__data_start = .) ;
@@ -278,7 +282,6 @@ PROVIDE (__flmap = DEFINED(__flmap) ? __flmap : 0) ;
   .debug_rnglists 0 : { *(.debug_rnglists) }
   .debug_str_offsets 0 : { *(.debug_str_offsets) }
   .debug_sup      0 : { *(.debug_sup) }
-  .fae_info :  { KEEP(*(.fae_info)) }
-  .fae_entries : { PROVIDE(.begin_fae_entries = .); KEEP(*(.fae_entries)) }
+  .eh_frame : { KEEP (*(.eh_frame)) }
 }
 

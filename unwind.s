@@ -6,6 +6,12 @@ __tmp_reg__ = 0
 __zero_reg__ = 1
 	.text
 
+
+; .global	__cxa_throw
+;	 .type	__cxa_throw, @function
+; __cxa_throw: ; r24 = exception, r22 = type_info, r20 = dtor
+
+
 .global	__fae_unwind
 	.type	__fae_unwind, @function
 __fae_unwind:
@@ -40,7 +46,7 @@ is_skip:
 unwind_ret:
   ret
 unknown_func:
-  call _ZSt9terminatev ; std::terminate
+  call __fae_terminate ; std::terminate
 
 is_pop:
   cbr r26, 0x80 ; clears high bit

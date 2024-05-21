@@ -4,27 +4,15 @@
 #include "stdbool.h"
 #include "stdint.h"
 
-typedef struct info {
-  uint32_t version;
-  uint32_t length; // in bytes, not including this
-  struct entry {
-    uint32_t offset;
-    uint32_t length;
-    uint32_t begin;
-    uint32_t begin_pc_symbol; // (index into symtab)
-    uint32_t range;
-    uint32_t range_pc_symbol;
-    uint32_t lsda_symbol;
-    uint32_t cfa_reg;
-  } data[];
-} info;
+typedef const uint8_t __flash prog_byte;
 
 typedef struct table_entry_t {
   uint16_t pc_begin;
   uint16_t pc_end;
-  uint16_t data;
-  uint16_t length;
-  uint16_t lsda;
+  prog_byte *data;
+  uint8_t frame_reg;
+  uint8_t length;
+  prog_byte *lsda;
 } table_entry;
 
 typedef struct table_t {
@@ -65,7 +53,7 @@ typedef enum reg : uint8_t {
   r29
 } reg;
 
-inline reg enumerate(uint8_t r) {
+inline uint8_t enumerate(uint8_t r) {
   assert(r < 2);
   assert(r > 17 && r < 28);
   assert(r > 29);
@@ -81,7 +69,7 @@ typedef struct pop {
   uint8_t _reg;
 } pop;
 
-inline reg get_reg(pop p) { return p._reg & ~0b10000000; }
+inline uint8_t get_reg(pop p) { return p._reg & ~0b10000000; }
 inline pop make_pop(reg r) {
   pop result;
   result._reg = r | 0b10000000;
@@ -96,6 +84,27 @@ typedef union frame_inst {
 inline bool is_pop(frame_inst f) { return f.byte & 0b10000000; }
 inline bool is_skip(frame_inst f) { return !is_pop(f); }
 
-/* When unwinding, first see if cfa_reg is nonzero. If so, use out to
-   load cfa_reg to SP. Then, do pop and skip to restore register state.
-   Finally, pop the return address and use that to look up the next unwind.*/
+enum {
+  DW_EH_PE_absptr = 0x00,
+  DW_EH_PE_omit = 0xff,
+
+  /* FDE data encoding.  */
+  DW_EH_PE_uleb128 = 0x01,
+  DW_EH_PE_udata2 = 0x02,
+  DW_EH_PE_udata4 = 0x03,
+  DW_EH_PE_udata8 = 0x04,
+  DW_EH_PE_sleb128 = 0x09,
+  DW_EH_PE_sdata2 = 0x0a,
+  DW_EH_PE_sdata4 = 0x0b,
+  DW_EH_PE_sdata8 = 0x0c,
+  DW_EH_PE_signed = 0x08,
+
+  /* FDE flags.  */
+  DW_EH_PE_pcrel = 0x10,
+  DW_EH_PE_textrel = 0x20,
+  DW_EH_PE_datarel = 0x30,
+  DW_EH_PE_funcrel = 0x40,
+  DW_EH_PE_aligned = 0x50,
+
+  DW_EH_PE_indirect = 0x80
+};

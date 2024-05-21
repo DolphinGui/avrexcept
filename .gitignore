@@ -59,4 +59,4 @@ dkms.conf
 .gdb_history
 compile_commands.json
 .cache
-dump.txt
+*.txt
