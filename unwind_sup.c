@@ -103,25 +103,24 @@ found_handler:
   }
 }
 
-void _Unwind_RaiseException() {
-  printf("unwind_raise called\n");
-  __fae_terminate();
-}
-
-
 // returns data pointer for pc entry. If no entry is found, return 0
 table_data __fae_get_ptr(uint16_t pc) {
   table_data result;
   pc <<= 1; // program counters are word-addressed
+  printf("unwinding at pc 0x%x\n", pc);
   const table_t __flash *table = (const table_t __flash *)__fae_table_start;
   unsigned length = table->length / sizeof(struct table_entry_t);
   for (int i = 0; i < length; i++) {
     if (table->data[i].pc_begin < pc && pc < table->data[i].pc_end) {
-      result.data = table->data[i].data;
-      result.data_end = table->data[i].data + table->data[i].length;
+      if (table->data[i].length != 0) {
+        result.data = table->data[i].data;
+        result.data_end = table->data[i].data + table->data[i].length;
+      } else {
+        result.data = (prog_byte *)0xffff;
+      }
       result.lsda = table->data[i].lsda;
       printf("data: 0x%x\n", (uint16_t)result.data);
-      if (result.lsda != (prog_byte *)0xffff) {
+      if (result.lsda != NULL) {
         printf("lsda: 0x%x\n", (uint16_t)result.lsda);
         printf("lsda begin: 0x%x\n", (uint16_t)__lsda_begin);
         print_lsda(result.lsda, pc - table->data[i].pc_begin);

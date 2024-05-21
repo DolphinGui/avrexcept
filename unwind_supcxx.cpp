@@ -27,4 +27,7 @@ extern "C" void print_int() {
   std::printf("int address: %x", (uint16_t)&n);
 }
 
-extern "C" void __fae_terminate() { std::terminate(); }
+extern "C" void __fae_terminate() {
+  std::printf("terminating!\n");
+  std::terminate();
+}

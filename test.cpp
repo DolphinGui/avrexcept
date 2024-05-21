@@ -5,7 +5,6 @@
 #include <stdio.h>
 
 extern "C" void *get_SP() noexcept;
-extern "C" void __fae_unwind();
 // experimentally SP begins at 2295
 void stack_scan(const char *end) {
   int col = 0;
@@ -35,7 +34,6 @@ struct Destructable {
   Destructable d;
   try {
     sink(n);
-    __fae_unwind();
     throw 12;
     stack_scan(static_cast<char *>(n));
   } catch (int i) {

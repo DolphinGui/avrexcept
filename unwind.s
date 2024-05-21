@@ -6,15 +6,9 @@ __tmp_reg__ = 0
 __zero_reg__ = 1
 	.text
 
-
-; .global	__cxa_throw
-;	 .type	__cxa_throw, @function
-; __cxa_throw: ; r24 = exception, r22 = type_info, r20 = dtor
-
-
-.global	__fae_unwind
-	.type	__fae_unwind, @function
-__fae_unwind:
+.global	_Unwind_RaiseException
+	.type	_Unwind_RaiseException, @function
+_Unwind_RaiseException:
   pop r25 ; read the return address
   pop r24
   call __fae_get_ptr ; returns in r18-r23
@@ -44,7 +38,7 @@ is_skip:
   rjmp unwind_loop
 
 unwind_ret:
-  ret
+  rjmp _Unwind_RaiseException
 unknown_func:
   call __fae_terminate ; std::terminate
 
