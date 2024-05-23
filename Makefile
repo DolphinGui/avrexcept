@@ -9,9 +9,9 @@ AS=avr-as
 MCU=atmega328p
 
 ASFLAGS = -mmcu=$(MCU)
-CFLAGS = -mmcu=$(MCU)  -maccumulate-args -funwind-tables -Oz -falign-functions=16
-CPPFLAGS = -mmcu=$(MCU)  -maccumulate-args -funwind-tables -Oz -I. -frtti -falign-functions=16
-LDFLAGS = -Wl,-gc-sections -mmcu=$(MCU) -funwind-tables -falign-functions=16 -T
+CFLAGS = -mmcu=$(MCU)  -maccumulate-args -funwind-tables -Oz -g
+CPPFLAGS = -mmcu=$(MCU)  -maccumulate-args -funwind-tables -Oz -I. -frtti -g
+LDFLAGS = -Wl,-gc-sections -mmcu=$(MCU) -funwind-tables -T
 
 clean:
 	rm -f *.elf *.o *.hex dump.txt
@@ -29,3 +29,6 @@ test.elf: link.lds test.o crtbegin.o table_print.o print.o get_SP.o unwind.o unw
 
 sim: test.elf
 	simavr test.elf -m atmega328p
+
+gdb: test.elf
+	simavr test.elf -m atmega328p -g

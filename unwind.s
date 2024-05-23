@@ -4,17 +4,41 @@ __SP_L__ = 0x3d
 __SREG__ = 0x3f
 __tmp_reg__ = 0
 __zero_reg__ = 1
-	.text
+.data
+except_ptr:
+  .zero 2
+return_values:
+  .zero 7
+.text
 
 .global	_Unwind_RaiseException
 	.type	_Unwind_RaiseException, @function
 _Unwind_RaiseException:
+  sts except_ptr+1, r25
+  sts except_ptr, r24
+tailcall:
   pop r23 ; read the return address
   pop r22
+  lds r25, except_ptr+1
+  lds r24, except_ptr
   call __fae_get_ptr ; returns in r18-r23
-  ; r18 - data, r20 = end; r22 = lsda
+  ; r18 - data, r20 = end; r22 = landing_pad, r24 = type_index
   cpi r18, 0 ; if no entry found
   breq unknown_func ; std::terminate()
+  
+  cpi r24, 0xff ; if no landing pad
+  breq no_landing_pad
+  sts return_values+1, r19
+  sts return_values,   r18
+  sts return_values+3, r21
+  sts return_values+2, r20
+  sts return_values+5, r23
+  sts return_values+4, r22
+  sts return_values+6, r24
+  movw Z, r22
+  mov r22, r24
+  ijmp
+no_landing_pad:
   cpc r18, r20 ; if data = data_end, no unwind besides return
   cpc r19, r21
   breq unwind_ret
@@ -37,7 +61,7 @@ is_skip:
   rjmp unwind_loop
 
 unwind_ret:
-  rjmp _Unwind_RaiseException
+  rjmp tailcall
 unknown_func:
   call __fae_terminate ; std::terminate
 

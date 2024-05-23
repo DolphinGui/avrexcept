@@ -10,10 +10,10 @@ extern prog_byte __fae_table_stop[];
 void __fae_terminate() __attribute__((noreturn));
 
 typedef struct table_data {
-  prog_byte *data;     // r18-19
-  prog_byte *data_end; // r20-21
-  prog_byte *lsda;     // r22-23
-  // uint16_t type_index; // r24-25
+  prog_byte *data;      // r18-19
+  prog_byte *data_end;  // r20-21
+  uint16_t landing_pad; // r22-23
+  uint8_t type_index;   // r24
 } table_data;
 
 static uint8_t uleb(prog_byte *ptr, uint16_t *out) {
@@ -27,6 +27,16 @@ static uint8_t uleb(prog_byte *ptr, uint16_t *out) {
   }
   return 2;
 }
+
+// here because for some reason g++ emits symbols for it directly in cfi
+// directives Really should rewrite gxx_personality instead of doing it here,
+// but for now this works
+void __gxx_personality_v0() {}
+
+// todo implement later
+void _Unwind_Resume() { __fae_terminate(); }
+void _Unwind_Resume_or_Rethrow() { __fae_terminate(); }
+void _Unwind_ForcedUnwind() { __fae_terminate(); }
 
 static uint8_t sleb(prog_byte *data, int16_t *const val) {
   int16_t i = 0;
@@ -47,9 +57,11 @@ static uint8_t sleb(prog_byte *data, int16_t *const val) {
   return i;
 }
 void print_typename(const void *type);
-// this is very bad, and probably should be rewritten in assembly for speed
-// need to figure out a way to profile via simavr
-static void print_lsda(prog_byte *ptr, uint16_t pc_offset) {
+void *get_ptr(void *exc, const void *catch_type);
+
+// this is very bad, and probably should be rewritten in assembly for speed/size
+static uint8_t personality(prog_byte *ptr, uint16_t pc_offset, void *exc,
+                           uint16_t *lp_out) {
   typedef void *const __flash prog_ptr;
   uint8_t lp_encoding = *ptr++;
   uint16_t lp_offset = 0;
@@ -63,10 +75,6 @@ static void print_lsda(prog_byte *ptr, uint16_t pc_offset) {
   uint8_t call_encoding = *ptr++;
   uint16_t call_table_length;
   ptr += uleb(ptr, &call_table_length);
-  printf("lp_encoding: 0x%x, type_encoding: 0x%x, type offset: 0x%x\ncall "
-         "encoding: 0x%x, call length: 0x%x\n",
-         lp_encoding, type_encoding, types_offset, call_encoding,
-         call_table_length);
   if (type_encoding != DW_EH_PE_absptr || call_encoding != DW_EH_PE_uleb128) {
     __fae_terminate();
   }
@@ -81,13 +89,14 @@ static void print_lsda(prog_byte *ptr, uint16_t pc_offset) {
     ptr += uleb(ptr, &lp_ip);
     ptr += uleb(ptr, &action_offset);
     if (ip_start < pc_offset && pc_offset <= ip_start + ip_range) {
+      *lp_out += lp_ip;
       goto found_handler;
     }
   }
   __fae_terminate();
 found_handler:
   if (action_offset == 0) {
-    return; // properly handle this later
+    return 0;
   }
   ptr = end + action_offset - 1;
   while (true) {
@@ -95,17 +104,24 @@ found_handler:
     ptr += sleb(ptr, &action);
     sleb(ptr, &offset);
     ptr += offset;
-    printf("action %i, offset %i ", action, offset);
-    if (action != 0)
-      print_typename(type_table[-1 * action]);
+    if (action != 0) {
+      void *ptr = get_ptr(exc, type_table[-1 * action]);
+      if (ptr) {
+        return action;
+      }
+    } else {
+      return 0;
+    }
     if (offset == 0)
       break;
   }
+  __fae_terminate();
 }
 
 // returns data pointer for pc entry. If no entry is found, return 0
-table_data __fae_get_ptr(void *exc, uint16_t pc) {
+table_data __fae_get_ptr(void *except, uint16_t pc) {
   table_data result;
+  result.type_index = 0xff;
   pc <<= 1; // program counters are word-addressed
   printf("unwinding at pc 0x%x\n", pc);
   const table_t __flash *table = (const table_t __flash *)__fae_table_start;
@@ -114,12 +130,14 @@ table_data __fae_get_ptr(void *exc, uint16_t pc) {
     if (table->data[i].pc_begin < pc && pc < table->data[i].pc_end) {
       result.data = table->data[i].data;
       result.data_end = table->data[i].data + table->data[i].length;
-      result.lsda = table->data[i].lsda;
-      printf("data: 0x%x\n", (uint16_t)result.data);
-      if (result.lsda != NULL) {
-        printf("lsda: 0x%x\n", (uint16_t)result.lsda);
-        printf("lsda begin: 0x%x\n", (uint16_t)__lsda_begin);
-        print_lsda(result.lsda, pc - table->data[i].pc_begin);
+      if (table->data[i].lsda != NULL) {
+        result.landing_pad = table->data[i].pc_begin;
+        result.type_index =
+            personality(table->data[i].lsda, pc - table->data[i].pc_begin,
+                        except, &result.landing_pad);
+        printf("landing pad: 0x%x\n", result.landing_pad);
+        printf("type index: %d\n", result.type_index);
+        result.landing_pad >>= 1;
       }
       return result;
     }
