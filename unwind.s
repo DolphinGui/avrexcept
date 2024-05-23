@@ -9,15 +9,14 @@ __zero_reg__ = 1
 .global	_Unwind_RaiseException
 	.type	_Unwind_RaiseException, @function
 _Unwind_RaiseException:
-  pop r25 ; read the return address
-  pop r24
+  pop r23 ; read the return address
+  pop r22
   call __fae_get_ptr ; returns in r18-r23
   ; r18 - data, r20 = end; r22 = lsda
   cpi r18, 0 ; if no entry found
   breq unknown_func ; std::terminate()
-  ldi r24, 0xff
-  cpi r18, 0xff ; if no data, only return address needs to be unwound
-  cpc r19, r24
+  cpc r18, r20 ; if data = data_end, no unwind besides return
+  cpc r19, r21
   breq unwind_ret
   movw Z, r18
 
