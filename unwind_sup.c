@@ -32,9 +32,7 @@ static uint8_t uleb(prog_byte *ptr, uint16_t *out) {
 // directives Really should rewrite gxx_personality instead of doing it here,
 // but for now this works
 void __gxx_personality_v0() {}
-
-// todo implement later
-void _Unwind_Resume_or_Rethrow() { __fae_terminate(); }
+// no plans to implement forced unwinding
 void _Unwind_ForcedUnwind() { __fae_terminate(); }
 
 static uint8_t sleb(prog_byte *data, int16_t *const val) {

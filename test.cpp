@@ -29,6 +29,7 @@ struct Except {};
 struct Destructable {
   ~Destructable() { printf("dtor called\n"); }
 };
+
 [[gnu::noinline]] int16_t n() {
   auto n = get_SP();
   Destructable d;
@@ -37,9 +38,8 @@ struct Destructable {
     throw 12;
     stack_scan(static_cast<char *>(n));
   } catch (int i) {
-    printf("caught integer\n");
-  } catch (Except e) {
-    printf("caught except\n");
+    printf("rethrowing integer %d\n", i);
+    throw;
   }
   printf("after unwind\n");
   return 12;
@@ -49,6 +49,10 @@ extern "C" void print_table();
 
 int main() {
   printf("main!\n");
-  auto s = n();
+  try {
+    auto s = n();
+  } catch (int i) {
+    printf("caught integer %d\n", i);
+  }
   printf("done with main\n");
 }

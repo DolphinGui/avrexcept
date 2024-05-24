@@ -14,7 +14,9 @@ return_values:
 
 .global	_Unwind_Resume
 	.type	_Unwind_Resume, @function
-  
+.global _Unwind_Resume_or_Rethrow ; resume_or_rethrow can be called from a forced_unwind,
+; I am not currently planning to implement forced unwinding
+	.type	_Unwind_Resume_or_Rethrow, @function
 
 .global	_Unwind_RaiseException
 	.type	_Unwind_RaiseException, @function
@@ -37,6 +39,10 @@ tailcall:
   sts return_values,   r18
   sts return_values+3, r21
   sts return_values+2, r20
+  in __tmp_reg__, __SP_H__
+  sts return_values+5, __tmp_reg__
+  in __tmp_reg__, __SP_L__
+  sts return_values+4, __tmp_reg__
   movw Z, r22 ; move landing_pad to Z
   mov r22, r24 ; move type_index
   lds r25, except_ptr+1
@@ -44,10 +50,18 @@ tailcall:
   ijmp
 
 _Unwind_Resume:
-  sts return_values+1, r19
-  sts return_values,   r18
-  sts return_values+3, r21
-  sts return_values+2, r20
+_Unwind_Resume_or_Rethrow:
+  in __tmp_reg__, __SREG__
+  cli
+  lds r19, return_values+5
+  out __SP_H__, r19
+  lds r19, return_values+4
+  out __SREG__, __tmp_reg__
+  out __SP_L__, r19
+  lds r19, return_values+1
+  lds r18, return_values
+  lds r21, return_values+3
+  lds r20, return_values+2
 no_landing_pad:
   cpc r18, r20 ; if data = data_end, no unwind besides return
   cpc r19, r21
