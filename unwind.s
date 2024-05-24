@@ -78,12 +78,16 @@ unwind_loop:
   cp r26, __zero_reg__ ; if skip is zero, exit loop
   breq unwind_ret
 is_skip:
-  pop __tmp_reg__
-  dec r26
-  cpse r26, __zero_reg__ ; if pop is zero, must be the end
-  rjmp is_skip
+  in r24, __SP_L__
+  in r25, __SP_H__
+  add r24, r26
+  adc r25, __zero_reg__
+  in __tmp_reg__, __SREG__
+  cli
+  out __SP_L__, r24
+  out __SREG__, __tmp_reg__
+  out __SP_H__, r25
   rjmp unwind_loop
-
 unwind_ret:
   rjmp tailcall
 unknown_func:
