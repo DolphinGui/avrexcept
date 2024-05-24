@@ -54,7 +54,7 @@ static uint8_t sleb(prog_byte *data, int16_t *const val) {
   return i;
 }
 void print_typename(const void *type);
-void *get_ptr(void *exc, const void *catch_type);
+void *__fae_get_adjusted_exc(void *exc, const void *catch_type);
 
 // this is very bad, and probably should be rewritten in assembly for speed/size
 static uint8_t personality(prog_byte *ptr, uint16_t pc_offset, void *exc,
@@ -102,7 +102,10 @@ found_handler:
     sleb(ptr, &offset);
     ptr += offset;
     if (action != 0) {
-      void *ptr = get_ptr(exc, type_table[-1 * action]);
+      void *catch_type = type_table[-1 * action];
+      if (catch_type == NULL) // if it is a catch(...) block, match anything
+        return action;
+      void *ptr = __fae_get_adjusted_exc(exc, catch_type);
       if (ptr) {
         return action;
       }

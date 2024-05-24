@@ -21,6 +21,7 @@ return_values:
 .global	_Unwind_RaiseException
 	.type	_Unwind_RaiseException, @function
 _Unwind_RaiseException:
+_Unwind_Resume_or_Rethrow:
   sts except_ptr+1, r25
   sts except_ptr, r24
 tailcall:
@@ -50,7 +51,6 @@ tailcall:
   ijmp
 
 _Unwind_Resume:
-_Unwind_Resume_or_Rethrow:
   in __tmp_reg__, __SREG__
   cli
   lds r19, return_values+5

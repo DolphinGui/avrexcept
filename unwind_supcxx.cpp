@@ -99,7 +99,8 @@ static void *get_adjusted_ptr(const void *c, const std::type_info *t,
   return nullptr;
 }
 
-extern "C" void *get_ptr(void *exc, const std::type_info *catch_type) {
+extern "C" void *__fae_get_adjusted_exc(void *exc,
+                                        const std::type_info *catch_type) {
   auto ue = static_cast<_Unwind_Exception *>(exc);
   auto cxa_except = __get_exception_header_from_ue(ue);
   auto thrown_obj = __get_object_from_ue(ue);

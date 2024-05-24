@@ -6,6 +6,11 @@
 
 extern "C" void *get_SP() noexcept;
 // experimentally SP begins at 2295
+
+struct Except {
+  int i;
+};
+
 void stack_scan(const char *end) {
   int col = 0;
   for (auto ptr = reinterpret_cast<const char *>(2295); ptr != end; --ptr) {
@@ -17,15 +22,10 @@ void stack_scan(const char *end) {
     }
   }
   puts("");
-  throw 1;
+  throw Except{12};
 }
 
-void sink(void *i) {
-  char *n = static_cast<char *>(alloca((uint16_t)i / 4));
-  printf("addr: %u, %u\n", (uint16_t)&i, (uint16_t)n);
-}
-struct Except {};
-
+void sink(void *i) { printf("addr: %u\n", (uint16_t)&i); }
 struct Destructable {
   ~Destructable() { printf("dtor called\n"); }
 };
@@ -35,10 +35,11 @@ struct Destructable {
   Destructable d;
   try {
     sink(n);
-    throw 12;
     stack_scan(static_cast<char *>(n));
   } catch (int i) {
-    printf("rethrowing integer %d\n", i);
+    printf("caught integer %d\n", i);
+  } catch (...) {
+    printf("rethrowing something\n");
     throw;
   }
   printf("after unwind\n");
@@ -51,8 +52,8 @@ int main() {
   printf("main!\n");
   try {
     auto s = n();
-  } catch (int i) {
-    printf("caught integer %d\n", i);
+  } catch (Except e) {
+    printf("caught Except %d\n", e.i);
   }
   printf("done with main\n");
 }
