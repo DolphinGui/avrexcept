@@ -104,19 +104,9 @@ extern "C" void *get_ptr(void *exc, const std::type_info *catch_type) {
   auto cxa_except = __get_exception_header_from_ue(ue);
   auto thrown_obj = __get_object_from_ue(ue);
   auto thrown_type = cxa_except->exceptionType;
-  return get_adjusted_ptr(catch_type, thrown_type, thrown_obj);
+  cxa_except->adjustedPtr =
+      get_adjusted_ptr(catch_type, thrown_type, thrown_obj);
+  return cxa_except->adjustedPtr;
 }
 
-extern "C" void print_typename(const std::type_info *type) noexcept {
-  std::printf("typename: %s\n", type->name());
-}
-
-extern "C" void print_int() {
-  auto &n = typeid(int);
-  std::printf("int address: %x", (uint16_t)&n);
-}
-
-extern "C" void __fae_terminate() {
-  std::puts("terminating!");
-  std::terminate();
-}
+extern "C" void __fae_terminate() { std::terminate(); }

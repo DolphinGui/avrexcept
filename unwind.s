@@ -11,6 +11,11 @@ return_values:
   .zero 7
 .text
 
+
+.global	_Unwind_Resume
+	.type	_Unwind_Resume, @function
+  
+
 .global	_Unwind_RaiseException
 	.type	_Unwind_RaiseException, @function
 _Unwind_RaiseException:
@@ -32,12 +37,17 @@ tailcall:
   sts return_values,   r18
   sts return_values+3, r21
   sts return_values+2, r20
-  sts return_values+5, r23
-  sts return_values+4, r22
-  sts return_values+6, r24
-  movw Z, r22
-  mov r22, r24
+  movw Z, r22 ; move landing_pad to Z
+  mov r22, r24 ; move type_index
+  lds r25, except_ptr+1
+  lds r24, except_ptr
   ijmp
+
+_Unwind_Resume:
+  sts return_values+1, r19
+  sts return_values,   r18
+  sts return_values+3, r21
+  sts return_values+2, r20
 no_landing_pad:
   cpc r18, r20 ; if data = data_end, no unwind besides return
   cpc r19, r21

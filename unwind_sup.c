@@ -34,7 +34,6 @@ static uint8_t uleb(prog_byte *ptr, uint16_t *out) {
 void __gxx_personality_v0() {}
 
 // todo implement later
-void _Unwind_Resume() { __fae_terminate(); }
 void _Unwind_Resume_or_Rethrow() { __fae_terminate(); }
 void _Unwind_ForcedUnwind() { __fae_terminate(); }
 
@@ -123,7 +122,6 @@ table_data __fae_get_ptr(void *except, uint16_t pc) {
   table_data result;
   result.type_index = 0xff;
   pc <<= 1; // program counters are word-addressed
-  printf("unwinding at pc 0x%x\n", pc);
   const table_t __flash *table = (const table_t __flash *)__fae_table_start;
   unsigned length = table->length / sizeof(struct table_entry_t);
   for (int i = 0; i < length; i++) {
@@ -135,8 +133,6 @@ table_data __fae_get_ptr(void *except, uint16_t pc) {
         result.type_index =
             personality(table->data[i].lsda, pc - table->data[i].pc_begin,
                         except, &result.landing_pad);
-        printf("landing pad: 0x%x\n", result.landing_pad);
-        printf("type index: %d\n", result.type_index);
         result.landing_pad >>= 1;
       }
       return result;
