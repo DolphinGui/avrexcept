@@ -11,6 +11,7 @@ MCU=atmega328p
 ASFLAGS = -mmcu=$(MCU)
 CFLAGS = -mmcu=$(MCU)  -maccumulate-args -funwind-tables -Oz -g
 CXXFLAGS = -mmcu=$(MCU)  -maccumulate-args -funwind-tables -Oz -I. -frtti -g
+CPPFLAGS = -DNDEBUG
 LDFLAGS = -Wl,-gc-sections -mmcu=$(MCU) -funwind-tables
 
 clean:
@@ -23,7 +24,7 @@ dump.txt: test.elf
 	avr-objdump -Cd test.elf > dump.txt
 
 test.elf: test.o crtbegin.o table_print.o print.o get_SP.o unwind.o unwind_sup.o unwind_supcxx.o
-	avr-g++.sh -o $@ $(LDFLAGS) $^
+	$(CXX) -T link.lds -o  $@ $(LDFLAGS) $^
 
 sim: test.elf
 	simavr test.elf -m atmega328p

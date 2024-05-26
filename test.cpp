@@ -2,6 +2,7 @@
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <cstdint>
+#include <stdexcept>
 #include <stdio.h>
 
 extern "C" void *get_SP() noexcept;
@@ -22,7 +23,7 @@ void stack_scan(const char *end) {
     }
   }
   puts("");
-  throw Except{12};
+  throw std::runtime_error("stack scan throws");
 }
 
 void sink(void *i) { printf("addr: %u\n", (uint16_t)&i); }
@@ -52,8 +53,8 @@ int main() {
   printf("main!\n");
   try {
     auto s = n();
-  } catch (Except e) {
-    printf("caught Except %d\n", e.i);
+  } catch (std::exception const &e) {
+    printf("caught std::exception: %s\n", e.what());
   }
   printf("done with main\n");
 }

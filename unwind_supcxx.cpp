@@ -3,6 +3,12 @@
 #include <exception>
 #include <typeinfo>
 
+#ifndef NDEBUG
+#define dbg(...) printf(__VA_ARGS__)
+#else
+#define dbg(...)
+#endif
+
 struct _Unwind_Exception;
 typedef enum {
   _URC_NO_REASON = 0,
@@ -105,9 +111,13 @@ extern "C" void *__fae_get_adjusted_exc(void *exc,
   auto cxa_except = __get_exception_header_from_ue(ue);
   auto thrown_obj = __get_object_from_ue(ue);
   auto thrown_type = cxa_except->exceptionType;
+  dbg("catch %s thrown %s\n", catch_type->name(), thrown_type->name());
   cxa_except->adjustedPtr =
       get_adjusted_ptr(catch_type, thrown_type, thrown_obj);
   return cxa_except->adjustedPtr;
 }
 
-extern "C" void __fae_terminate() { std::terminate(); }
+extern "C" void __fae_terminate() {
+  dbg("terminating\n");
+  std::terminate();
+}

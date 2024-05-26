@@ -3,6 +3,12 @@
 #include <avr/pgmspace.h>
 #include <stdio.h>
 
+#ifndef NDEBUG
+#define dbg(...) printf(__VA_ARGS__)
+#else
+#define dbg(...)
+#endif
+
 extern prog_byte __lsda_begin[];
 extern prog_byte __fae_table_start[];
 extern prog_byte __fae_table_stop[];
@@ -59,6 +65,7 @@ void *__fae_get_adjusted_exc(void *exc, const void *catch_type);
 // this is very bad, and probably should be rewritten in assembly for speed/size
 static uint8_t personality(prog_byte *ptr, uint16_t pc_offset, void *exc,
                            uint16_t *lp_out) {
+  dbg("personality called\n");
   typedef void *const __flash prog_ptr;
   uint8_t lp_encoding = *ptr++;
   uint16_t lp_offset = 0;
@@ -66,13 +73,18 @@ static uint8_t personality(prog_byte *ptr, uint16_t pc_offset, void *exc,
     ptr += uleb(ptr, &lp_offset);
   }
   uint8_t type_encoding = *ptr++;
-  uint16_t types_offset;
-  ptr += uleb(ptr, &types_offset);
+  uint16_t types_offset = 0;
+  if (type_encoding != DW_EH_PE_omit) {
+    ptr += uleb(ptr, &types_offset);
+  }
   prog_ptr *type_table = (prog_ptr *)(ptr + types_offset);
   uint8_t call_encoding = *ptr++;
   uint16_t call_table_length;
   ptr += uleb(ptr, &call_table_length);
-  if (type_encoding != DW_EH_PE_absptr || call_encoding != DW_EH_PE_uleb128) {
+  if ((type_encoding != DW_EH_PE_absptr && type_encoding != DW_EH_PE_omit) ||
+      call_encoding != DW_EH_PE_uleb128) {
+    dbg("unknown encodings found: type: %d, call: %d\n", type_encoding,
+        call_encoding);
     __fae_terminate();
   }
   prog_byte *end = ptr + call_table_length;
@@ -86,13 +98,17 @@ static uint8_t personality(prog_byte *ptr, uint16_t pc_offset, void *exc,
     ptr += uleb(ptr, &lp_ip);
     ptr += uleb(ptr, &action_offset);
     if (ip_start < pc_offset && pc_offset <= ip_start + ip_range) {
-      *lp_out += lp_ip;
+      *lp_out = lp_ip;
+      dbg("found handler [0x%x, 0x%x], lp: 0x%x\n", ip_start,
+          ip_start + ip_range, *lp_out);
       goto found_handler;
     }
   }
+  dbg("no suitible handler found\n");
   __fae_terminate();
 found_handler:
   if (action_offset == 0) {
+    dbg("no action\n");
     return 0;
   }
   ptr = end + action_offset - 1;
@@ -101,6 +117,7 @@ found_handler:
     ptr += sleb(ptr, &action);
     sleb(ptr, &offset);
     ptr += offset;
+    dbg("checking entry %d\n", action);
     if (action != 0) {
       void *catch_type = type_table[-1 * action];
       if (catch_type == NULL) // if it is a catch(...) block, match anything
@@ -115,6 +132,7 @@ found_handler:
     if (offset == 0)
       break;
   }
+  dbg("no action found\n");
   __fae_terminate();
 }
 
@@ -123,6 +141,7 @@ table_data __fae_get_ptr(void *except, uint16_t pc) {
   table_data result;
   result.type_index = 0xff;
   pc <<= 1; // program counters are word-addressed
+  dbg("unwinding at 0x%x with except 0x%x\n", pc, (uint16_t)except);
   const table_t __flash *table = (const table_t __flash *)__fae_table_start;
   unsigned length = table->length / sizeof(struct table_entry_t);
   for (int i = 0; i < length; i++) {
@@ -130,15 +149,22 @@ table_data __fae_get_ptr(void *except, uint16_t pc) {
       result.data = table->data[i].data;
       result.data_end = table->data[i].data + table->data[i].length;
       if (table->data[i].lsda != NULL) {
-        result.landing_pad = table->data[i].pc_begin;
+        dbg("lsda found at 0x%x\n", (uint16_t)table->data[i].lsda);
         result.type_index =
             personality(table->data[i].lsda, pc - table->data[i].pc_begin,
                         except, &result.landing_pad);
+        if (result.landing_pad == 0) {
+          result.type_index = 0xff;
+          return result;
+        }
+        result.landing_pad += table->data[i].pc_begin;
         result.landing_pad >>= 1;
       }
+      dbg("found entry\n");
       return result;
     }
   }
+  dbg("no entry found\n");
   result.data = 0;
   return result;
 }
