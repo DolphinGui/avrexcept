@@ -29,7 +29,7 @@ tailcall:
   pop r22
   lds r25, except_ptr+1
   lds r24, except_ptr
-  call __fae_get_ptr ; returns in r18-r23
+  rcall __fae_get_ptr ; returns in r18-r23
   ; r18 - data, r20 = end; r22 = landing_pad, r24 = type_index
   cpi r18, 0 ; if no entry found
   breq unknown_func ; std::terminate()
@@ -91,7 +91,7 @@ is_skip:
 unwind_ret:
   rjmp tailcall
 unknown_func:
-  call __fae_terminate ; std::terminate
+  rcall __fae_terminate ; std::terminate
 
 is_pop:
   cbr r26, 0x80 ; clears high bit

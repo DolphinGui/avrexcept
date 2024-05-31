@@ -1,33 +1,40 @@
-.PHONEY: all clean sim
+.PHONEY: all clean sim install echo
 
-all: test.hex dump.txt
+all: build/$(ARCH)/libfae.a
 
-CC=avr-gcc
-CXX=avr-g++.sh
-AS=avr-as
+CC:=avr-gcc
+CXX:=avr-g++.sh
+AS:=avr-as
 
-MCU=atmega328p
+MCU:=atmega328p
 
-ASFLAGS = -mmcu=$(MCU)
-CFLAGS = -mmcu=$(MCU)  -maccumulate-args -funwind-tables -Oz -g
-CXXFLAGS = -mmcu=$(MCU)  -maccumulate-args -funwind-tables -Oz -I. -frtti -g
-CPPFLAGS = -DNDEBUG
-LDFLAGS = -Wl,-gc-sections -mmcu=$(MCU) -funwind-tables
+C_SRC:=unwind_sup.c
+CXX_SRC:=unwind_supcxx.cpp
+ASM_SRC:=unwind.s
+
+ASFLAGS:= --mlink-relax
+CFLAGS :=  -maccumulate-args -funwind-tables -Oz -g
+CXXFLAGS := -maccumulate-args -funwind-tables -Oz -I. -frtti -g
+CPPFLAGS := -DNDEBUG
 
 clean:
-	rm -f *.elf *.o *.hex dump.txt
+	rm -f *.elf *.o *.hex *.a dump.txt
+	rm -rdf build
 
-test.hex: test.elf
-	avr-objcopy -j .text -j .data -O ihex test.elf test.hex
+build/$(ARCH):
+	mkdir -p $@
 
-dump.txt: test.elf
-	avr-objdump -Cd test.elf > dump.txt
+build/$(ARCH)/%.o: %.c | build/$(ARCH)
+	$(CC)  -mmcu=$(ARCH) $(CPPFLAGS) $(CFLAGS) -c -o $@ $^
 
-test.elf: test.o crtbegin.o table_print.o print.o get_SP.o unwind.o unwind_sup.o unwind_supcxx.o
-	$(CXX) -T link.lds -o  $@ $(LDFLAGS) $^
+build/$(ARCH)/%.o: %.cpp | build/$(ARCH)
+	$(CXX)  -mmcu=$(ARCH) $(CXXFLAGS) $(CPPFLAGS) -c -o $@ $^
 
-sim: test.elf
-	simavr test.elf -m atmega328p
+build/$(ARCH)/%.o: %.s | build/$(ARCH)
+	$(AS)  -mmcu=$(ARCH) $(ASFLAGS) -o $@ $^
 
-gdb: test.elf
-	simavr test.elf -m atmega328p -g
+build/$(ARCH)/libfae.a: build/$(ARCH)/unwind.o build/$(ARCH)/unwind_sup.o build/$(ARCH)/unwind_supcxx.o | build/$(ARCH)
+	avr-ar -crs $@ $^
+
+install: build/$(ARCH)/libfae.a
+	install $^ $(PREFIX)/lib/$(ARCH)/libfae.a
