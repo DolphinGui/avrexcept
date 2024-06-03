@@ -9,8 +9,9 @@ AS:=avr-as
 MCU:=atmega328p
 
 ASFLAGS := -mmcu=$(MCU)
-CFLAGS := -mmcu=$(MCU)  -maccumulate-args -funwind-tables -Oz -g
-CXXFLAGS := -mmcu=$(MCU)  -maccumulate-args -funwind-tables -Oz -I. -frtti -g
+FLAGS :=   -maccumulate-args -funwind-tables -ffunction-sections  -mmcu=$(MCU) -Oz -g -I . -mcall-prologues
+CFLAGS := $(FLAGS)
+CXXFLAGS := $(FLAGS) -frtti
 CPPFLAGS := -DNDEBUG
 LDFLAGS := -Wl,-gc-sections -mmcu=$(MCU) -funwind-tables -lfae -Xlinker -Map=output.map 
 
