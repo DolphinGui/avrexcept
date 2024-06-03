@@ -1,9 +1,9 @@
-#include <alloca.h>
 #include <avr/io.h>
 #include <avr/pgmspace.h>
 #include <cstdint>
 #include <stdexcept>
 #include <stdio.h>
+#include <vector>
 
 extern "C" void *get_SP() noexcept;
 // experimentally SP begins at 2295
@@ -22,7 +22,6 @@ void stack_scan(const char *end) {
       puts("");
     }
   }
-  puts("");
   throw std::runtime_error("stack scan throws");
 }
 
@@ -36,11 +35,15 @@ struct Destructable {
   Destructable d;
   try {
     sink(n);
+    std::vector<uint8_t> vec{1, 2, 3, 4, 5, 6, 7};
+    for (uint8_t u : vec) {
+      printf("u: %d\n", u);
+    }
     stack_scan(static_cast<char *>(n));
   } catch (int i) {
     printf("caught integer %d\n", i);
   } catch (...) {
-    printf("rethrowing something\n");
+    puts("caught something");
     throw;
   }
   printf("after unwind\n");

@@ -92,14 +92,18 @@ unwind_ret:
   rjmp tailcall
 unknown_func:
   rcall __fae_terminate ; std::terminate
-
+; this part is actually suprisingly buggy
+; if there are weird 
 is_pop:
   cbr r26, 0x80 ; clears high bit
   movw r18, Z
+  ldi r31, 0
   mov r30, r26
   lsl r30 ; size of each jump is two instructions
-  subi r30, lo8(-(pm(reg2)))
-  ldi r31, hi8(pm(reg2))
+  ldi r27, lo8(pm(reg2))
+  add r30, r27
+  ldi r27, hi8(pm(reg2))
+  adc r31, r27
   ijmp
 reg2:
   pop r2
