@@ -28,10 +28,12 @@ static uint8_t uleb(prog_byte *ptr, uint16_t *out) {
     return 1;
   } else {
     *out &= 0b01111111;
-    *out <<= 7;
-    *out |= (*ptr & 0b01111111);
+    if (*ptr & 0b00000001) {
+      *out |= 0b10000000;
+    }
+    *out |= *ptr << 7;
+    return 2;
   }
-  return 2;
 }
 
 // here because for some reason g++ emits symbols for it directly in cfi
@@ -97,6 +99,8 @@ static uint8_t personality(prog_byte *ptr, uint16_t pc_offset, void *exc,
     ptr += uleb(ptr, &ip_range);
     ptr += uleb(ptr, &lp_ip);
     ptr += uleb(ptr, &action_offset);
+    dbg("checking handler [0x%x, 0x%x], pc_offset: 0x%x\n", ip_start,
+        ip_start + ip_range, pc_offset);
     if (ip_start < pc_offset && pc_offset <= ip_start + ip_range) {
       *lp_out = lp_ip;
       dbg("found handler [0x%x, 0x%x], lp: 0x%x\n", ip_start,
@@ -157,7 +161,10 @@ table_data __fae_get_ptr(void *except, uint16_t pc) {
           result.type_index = 0xff;
           return result;
         }
+        dbg("type index 0x%x\n", result.type_index);
+        dbg("landing offset: 0x%x\n", result.landing_pad);
         result.landing_pad += table->data[i].pc_begin;
+        dbg("landing pad: 0x%x\n", result.landing_pad);
         result.landing_pad >>= 1;
       }
       dbg("found entry\n");
