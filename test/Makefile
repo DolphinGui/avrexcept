@@ -9,11 +9,11 @@ AS:=avr-as
 MCU:=atmega328p
 
 ASFLAGS := -mmcu=$(MCU)
-FLAGS :=   -maccumulate-args -funwind-tables -ffunction-sections  -mmcu=$(MCU) -Oz -g -I . -mcall-prologues
+FLAGS :=   -maccumulate-args -funwind-tables -ffunction-sections  -mmcu=$(MCU) -Oz -g -I . -mcall-prologues --param=min-pagesize=0 -Werror=array-bounds
 CFLAGS := $(FLAGS)
 CXXFLAGS := $(FLAGS) -frtti
 CPPFLAGS := -DNDEBUG
-LDFLAGS := -Wl,-gc-sections -mmcu=$(MCU) -funwind-tables -lfae -Xlinker -Map=output.map 
+LDFLAGS := -Wl,-gc-sections -mmcu=$(MCU) -funwind-tables -lfae -Xlinker -Map=output.map
 
 clean:
 	rm -f *.elf *.o *.hex dump.txt output.map
