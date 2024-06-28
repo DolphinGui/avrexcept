@@ -1,0 +1,6 @@
+{
+  "clangd.arguments": [
+    "--query-driver=/home/shin/out/root/bin/avr-gcc",
+    "--compile-commands-dir=."
+  ]
+}

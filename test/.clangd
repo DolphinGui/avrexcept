@@ -1,4 +1,4 @@
 CompileFlags:
-  Remove: [-mmcu*, -maccumulate-args]                 
-  
+  Remove: [-maccumulate-args]
+  Compiler: avr-gcc
 
