@@ -1,4 +1,4 @@
 CompileFlags:
-  Remove: [-maccumulate-args]
+  Remove: [-maccumulate-args, -mcall-prologues]
   Compiler: avr-gcc
 

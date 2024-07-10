@@ -44,11 +44,6 @@ int uart_getchar(FILE *stream) {
 FILE uart_output = FDEV_SETUP_STREAM(uart_putchar, NULL, _FDEV_SETUP_WRITE);
 FILE uart_input = FDEV_SETUP_STREAM(NULL, uart_getchar, _FDEV_SETUP_READ);
 
-extern "C" int ___extension_debug_output(char *str) noexcept {
-  puts(str);
-  return 1;
-}
-
 struct Initializer {
   Initializer() {
     uart_init();
